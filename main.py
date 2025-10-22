@@ -1,5 +1,5 @@
 from config.logging_config import setup_logging
-from file_utils.file_loader import load_json_file
+from utils.file_loader import load_json_file
 from core.drawing_generator import DrawingGenerator
 
 def main():

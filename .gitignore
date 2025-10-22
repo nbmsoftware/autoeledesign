@@ -3,3 +3,8 @@ __pycache__/
 .idea/
 *.pyc
 .env
+
+# AutoCAD temporary files
+*.bak
+*.dwl
+*.dwl2

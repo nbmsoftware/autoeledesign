@@ -47,7 +47,7 @@ def replace_placeholder_text_with_block(doc, search_text: str, block_name: str):
     for layout in doc.layouts:
         for entity in list(layout.query("TEXT")):
             if entity.dxf.text == search_text:
-                logger.info(f"Replacing '{search_text}' with '{block_name}'")
+                logger.debug(f"Replacing '{search_text}' with '{block_name}'")
                 insertion_point = entity.dxf.align_point
                 rotation = entity.dxf.rotation
 

@@ -1,4 +1,5 @@
 from core.layouts import LayoutRegistry
+from data.offices import get_office_info
 from utils.block_utils import copy_block_definition, replace_placeholder_text_with_block
 from utils.file_loader import load_cad_file
 import logging
@@ -42,6 +43,8 @@ class DrawingGenerator:
         self.input_data["SHEET_MAX"] = len(self.doc.layouts)-1
         # Format PROJECT_TECHNICIAN value
         self.format_project_technician()
+        # Add office info
+        self.add_office_info()
 
 
     def format_project_technician(self):
@@ -60,6 +63,18 @@ class DrawingGenerator:
             self.input_data["PROJECT_TECHNICIAN"] = initials
         else:
             raise ValueError(f"Unexpected name format: {name}")
+
+
+    def add_office_info(self):
+        """
+        Add the office info to the input data based on the MUNICIPALITY from inputs.
+        """
+        municipality_name = self.input_data.get("MUNICIPALITY")
+        if not municipality_name:
+            logger.info("No municipality specified. Skipping Office info import.")
+        office = get_office_info(municipality_name)
+        for key, value in office.items():
+            self.input_data[key.upper()] = value.upper()
 
 
     def add_engineer_stamps(self):

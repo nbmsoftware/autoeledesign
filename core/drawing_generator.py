@@ -73,7 +73,7 @@ class DrawingGenerator:
         block_name = f"ES_{engineer_name.replace(' ', '_').upper()}"
 
         # Load stamps library and copy the engineer stamp
-        stamps_doc = load_cad_file("data/engineer_stamps/stamps.dxf")
+        stamps_doc = load_cad_file("data/block_libraries/engineer_stamps.dxf")
         copy_block_definition(block_name, stamps_doc, self.doc)
 
         # Replace placeholders with the engineer stamp block reference

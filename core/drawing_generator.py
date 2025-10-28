@@ -1,11 +1,13 @@
 import ezdxf
 
 from core.layouts import LayoutRegistry
+from core.project_area_generator import generate_project_area_with_boundary
 from data.offices import get_office_info
 from utils.block_utils import copy_block_definition, replace_placeholder_text_with_block
 from utils.file_loader import load_cad_file
 from ezdxf.xref import Loader
 from ezdxf.layouts import Paperspace
+from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,6 +18,20 @@ class DrawingGenerator:
         self.template_path = template_path
         self.input_data = input_data
 
+        # Define paths
+        self.PROJECT_ROOT = Path(__file__).resolve().parent.parent
+        self.OUTPUT_FOLDER = self.PROJECT_ROOT / "output"
+        self.XREF_FOLDER = self.OUTPUT_FOLDER / "xref"
+
+        # Create folders
+        self._init_folders()
+
+
+    def _init_folders(self):
+        self.OUTPUT_FOLDER.mkdir(exist_ok=True)
+        self.XREF_FOLDER.mkdir(exist_ok=True)
+
+
     def generate(self):
         # Load the landbase
         logger.info("Loading project landbase")
@@ -23,6 +39,9 @@ class DrawingGenerator:
 
         # Load the template layouts
         self.load_template_layouts()
+
+        # Add project area image in msp
+        generate_project_area_with_boundary(self.doc, self.XREF_FOLDER)
 
         # Preprocess input data for template population
         self.process_input_data()
@@ -35,10 +54,12 @@ class DrawingGenerator:
         for layout_cls in LayoutRegistry.get_all():
             layout_instance = layout_cls(self.doc, self.input_data)
             layout_instance.edit()
-
         logger.info("Processed all layouts")
-        self.doc.saveas("output.dxf")
-        logger.info("Saved output file")
+
+        # Save final DXF in output folder
+        dxf_path = self.OUTPUT_FOLDER / "drawing.dxf"
+        self.doc.saveas(str(dxf_path))
+        logger.info(f"Saved output DXF: {dxf_path}")
 
 
     def process_input_data(self):

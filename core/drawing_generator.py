@@ -1,7 +1,11 @@
+import ezdxf
+
 from core.layouts import LayoutRegistry
 from data.offices import get_office_info
 from utils.block_utils import copy_block_definition, replace_placeholder_text_with_block
 from utils.file_loader import load_cad_file
+from ezdxf.xref import Loader
+from ezdxf.layouts import Paperspace
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,12 +17,12 @@ class DrawingGenerator:
         self.input_data = input_data
 
     def generate(self):
-        # Load base project template (frame with tables)
-        logger.info("Loading project template")
-        self.doc = load_cad_file(self.template_path)
+        # Load the landbase
+        logger.info("Loading project landbase")
+        self.doc = load_cad_file("data/inputs/landbase.dxf")
 
-        # Load landbase (property lines, subdivision boundary etc.) and place it in the template
-        # todo load landbase and split/duplicate layouts if needed
+        # Load the template layouts
+        self.load_template_layouts()
 
         # Preprocess input data for template population
         self.process_input_data()
@@ -32,9 +36,9 @@ class DrawingGenerator:
             layout_instance = layout_cls(self.doc, self.input_data)
             layout_instance.edit()
 
-        logger.info("All layouts processed successfully")
+        logger.info("Processed all layouts")
         self.doc.saveas("output.dxf")
-        logger.info("Output file saved successfully")
+        logger.info("Saved output file")
 
 
     def process_input_data(self):
@@ -93,3 +97,58 @@ class DrawingGenerator:
 
         # Replace placeholders with the engineer stamp block reference
         replace_placeholder_text_with_block(self.doc, search_text="ENGINEER STAMP", block_name=block_name)
+
+
+    def load_landbase(self):
+        """
+        Load the input Landbase (property lines, subdivision boundary etc.)
+        with Project Boundary into drawing modelspace.
+
+        -----  -----  -----  -----  -----  -----  -----  -----
+        Method not used since it currently creates a dxf file with error.
+        Saved for possible future changes.
+        [NOTE] When using this method, a template file has to be loaded in self.doc
+        inside generate method -> self.doc = load_cad_file(self.template_path)
+        """
+        logger.debug("Importing landbase from inputs")
+        landbase_dxf = load_cad_file("data/inputs/landbase.dxf")
+        loader = Loader(landbase_dxf, self.doc)
+        loader.load_modelspace(self.doc.modelspace())
+        loader.execute()
+        logger.info("Imported landbase from inputs")
+
+
+    def load_template_layouts(self):
+        """
+        Load template layout definitions (paperspace).
+        Remove default Layout1 after importing new layouts.
+        Preserve layout tab order from template.
+        """
+        logger.debug("Adding project template layouts")
+
+        # Load the template DXF
+        template_doc = ezdxf.readfile(self.template_path)
+        loader = Loader(template_doc, self.doc)
+
+        # Preserve layout order from template
+        template_layout_order = list(template_doc.layout_names_in_taborder())[1:]
+
+        for layout_name in template_layout_order:
+            layout = template_doc.layouts.get(layout_name)
+            if isinstance(layout, Paperspace):
+                logger.info(f"Layout: {layout.name}, entities: {len(layout)}")
+                loader.load_paperspace_layout(layout)
+
+        loader.execute()
+
+        # DELETE the default "Layout1" if it exists
+        try:
+            if "Layout1" in self.doc.layout_names_in_taborder():
+                self.doc.layouts.delete("Layout1")
+                logger.debug("Deleted default Layout1")
+        except Exception as e:
+            logger.warning(f"Could not delete Layout1: {e}")
+
+        logger.info("Added project template layouts")
+
+

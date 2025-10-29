@@ -12,8 +12,8 @@ def generate_project_area_with_boundary(
     doc,
     xref_folder,
     boundary_layer="_SP-BLK9-PR-PHASE LIMIT",
-    pad_x=100,
-    pad_y=50
+    pad_x=200,
+    pad_y=100
 ):
     """
     Generates a Mapbox static image of a PROJECT AREA and inserts it into modelspace next to the landbase.
@@ -160,10 +160,10 @@ def fetch_and_save_mapbox_img(bbox_str, height_px, width_px, output_img):
     """
     load_dotenv()
     mapbox_token = os.getenv("MAPBOX_TOKEN")
+    styleID = os.getenv("STYLE_ID")
 
-    style = "streets-v12"
     url = (
-        f"https://api.mapbox.com/styles/v1/mapbox/{style}/static/"
+        f"https://api.mapbox.com/styles/v1/{styleID}/static/"
         f"{bbox_str}/{width_px}x{height_px}"
         f"?access_token={mapbox_token}"
     )

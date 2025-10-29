@@ -1,12 +1,13 @@
 import ezdxf
 
 from core.layouts import LayoutRegistry
-from core.project_area_generator import generate_project_area_with_boundary
+from core.project_area import generate_project_area_with_boundary
 from data.offices import get_office_info
 from utils.block_utils import copy_block_definition, replace_placeholder_text_with_block
 from utils.file_loader import load_cad_file
 from ezdxf.xref import Loader
 from ezdxf.layouts import Paperspace
+from ezdxf.math import BoundingBox
 from pathlib import Path
 import logging
 
@@ -70,6 +71,43 @@ class DrawingGenerator:
         self.format_project_technician()
         # Add office info
         self.add_office_info()
+        # Add required data about project area image
+        self.add_project_area_img_input_data()
+
+
+    def add_project_area_img_input_data(self, boundary_layer="MAP_BOUNDARY", margin_factor=1.15):
+        """
+        Add required data about project area image from modelspace to input data.
+        Required data:
+            project boundary bounding box height with added margin
+            project boundary centroid
+        Project area image is found from modelspace based on project boundary that is in boundary_layer
+        and on top of the Project area image.
+
+        :param boundary_layer: layer in modelspace where the boundary is
+        :param margin_factor: factor to determine a margin size
+        """
+        # Find boundary polyline in given layer
+        boundary = None
+        for e in self.doc.modelspace().query(f'LWPOLYLINE[layer=="{boundary_layer}"]'):
+            boundary = e
+            break
+        if boundary is None:
+            raise ValueError(f"No LWPOLYLINE found on layer '{boundary_layer}'.")
+
+        # Compute project area bounding box and centroid & add it to input data
+        bbox = BoundingBox(boundary.get_points('xy'))
+        if not bbox.has_data:
+            raise ValueError("Boundary bounding box is empty.")
+        centroid = bbox.center  # Vec3(x, y, z)
+        self.input_data["PA_MSP_CENTER_POINT"] = (centroid.x, centroid.y)
+        logger.debug(f"Project area img Viewport model center (centroid): ({centroid.x:.3f}, {centroid.y:.3f})")
+
+        # Compute project area view height & add it to input data
+        height = bbox.size.y
+        view_height = height * margin_factor
+        self.input_data["PA_MSP_HEIGHT"] = view_height
+        logger.debug(f"Project area img height in msp (with margin): {view_height:.3f}")
 
 
     def format_project_technician(self):

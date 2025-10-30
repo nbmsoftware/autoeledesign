@@ -11,3 +11,5 @@ class SchematicDrawing(BaseLayout):
 
     def edit_specific(self):
         logger.info(f"Custom edits for {self.layout_name}")
+        # Add a viewport to project area image in msp
+        self.add_project_area_viewport()

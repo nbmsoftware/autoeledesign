@@ -46,9 +46,10 @@ class BaseLayout:
 
     def edit(self):
         """
-        Edit a layout.
+        Edit a layout template.
         """
         self.add_block_attrs()
+
         # Populate all block attributes in this layout
         for entity in self.layout.query("INSERT"):
             if isinstance(entity, Insert):
@@ -57,6 +58,8 @@ class BaseLayout:
                     if tag in self.block_attrs:
                         attrib.dxf.text = self.block_attrs[tag]
                         logger.debug(f"[ATTRIB] Updated {tag} with {attrib.dxf.text}")
+
+        # Continue with layout specific editing from subclass
         self.edit_specific()
 
 
@@ -91,6 +94,28 @@ class BaseLayout:
         if project_work_order is None:
             raise KeyError("Missing required attribute for drawing number generation: 'PROJECT_WORK_ORDER'")
         return project_work_order + '-' + self.layout_name
+
+
+    def add_project_area_viewport(self, paper_center=(808.6697, 546.143), paper_width=127.0005, paper_height=100.0752):
+        """
+        Create viewport to the project area image in modelspace.
+        Default params set for all paperspace layouts instead of COVER PAGE layouts.
+        Please update params when adding viewports to COVER PAGE layouts.
+
+        :param paper_center: center of the viewport on the paperspace - insertion point
+        :param paper_width: width of the viewport on the paperspace
+        :param paper_height: height of the viewport on the paperspace
+        """
+        centroid = self.block_attrs["PA_MSP_CENTER_POINT"]
+        view_height = self.block_attrs["PA_MSP_HEIGHT"]
+        viewport = self.layout.add_viewport(
+            center=paper_center,  # center in paperspace
+            size=(paper_width, paper_height),  # viewport width and height in paper units
+            view_center_point=centroid,  # center of view in modelspace
+            view_height=view_height  # height visible in model units
+        )
+        viewport.dxf.layer = "VIEWPORTS"
+        logger.info(f"Created project area viewport in {self.layout_name} layout.")
 
 
     def add_layout_specific_attrs(self):

@@ -47,9 +47,6 @@ class DrawingGenerator:
         # Preprocess input data for template population
         self.process_input_data()
 
-        # Add engineer stamps on all layouts
-        self.add_engineer_stamps()
-
         # Populate templates with input data and generate needed drawings on each layout template
         logger.info("Generating all layouts dynamically")
         for layout_cls in LayoutRegistry.get_all():
@@ -143,6 +140,9 @@ class DrawingGenerator:
     def add_engineer_stamps(self):
         """
         Add engineer stamps to all layouts.
+
+        Method not used currently since stamps will be added in pdf.
+        Keeping the method for possible future use.
         """
         engineer_name = self.input_data.get("SIGNING_ENGINEER")
         if not engineer_name:

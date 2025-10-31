@@ -14,13 +14,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class DrawingGenerator:
-    def __init__(self, template_path, input_data):
+    def __init__(self, input_data):
         self.doc = None
-        self.template_path = template_path
         self.input_data = input_data
 
         # Define paths
         self.PROJECT_ROOT = Path(__file__).resolve().parent.parent
+        self.TEMPLATES_FOLDER = self.PROJECT_ROOT / "data" / "templates"
         self.OUTPUT_FOLDER = self.PROJECT_ROOT / "output"
         self.XREF_FOLDER = self.OUTPUT_FOLDER / "xref"
 
@@ -39,13 +39,13 @@ class DrawingGenerator:
         self.doc = load_cad_file("data/inputs/landbase.dxf")
 
         # Load the template layouts
-        self.load_template_layouts()
+        self._load_template_layouts()
 
         # Add project area image in msp
         generate_project_area_with_boundary(self.doc, self.XREF_FOLDER)
 
         # Preprocess input data for template population
-        self.process_input_data()
+        self._process_input_data()
 
         # Populate templates with input data and generate needed drawings on each layout template
         logger.info("Generating all layouts dynamically")
@@ -60,19 +60,19 @@ class DrawingGenerator:
         logger.info(f"Saved output DXF: {dxf_path}")
 
 
-    def process_input_data(self):
+    def _process_input_data(self):
         logger.debug("Processing input data")
         # Add SHEET_MAX attr - how many sheets the project has
         self.input_data["SHEET_MAX"] = len(self.doc.layouts)-1
         # Format PROJECT_TECHNICIAN value
-        self.format_project_technician()
+        self._format_project_technician()
         # Add office info
-        self.add_office_info()
+        self._add_office_info()
         # Add required data about project area image
-        self.add_project_area_img_input_data()
+        self._add_project_area_img_input_data()
 
 
-    def add_project_area_img_input_data(self, boundary_layer="MAP_BOUNDARY", margin_factor=1.15):
+    def _add_project_area_img_input_data(self, boundary_layer="MAP_BOUNDARY", margin_factor=1.15):
         """
         Add required data about project area image from modelspace to input data.
         Required data:
@@ -107,7 +107,7 @@ class DrawingGenerator:
         logger.debug(f"Project area img height in msp (with margin): {view_height:.3f}")
 
 
-    def format_project_technician(self):
+    def _format_project_technician(self):
         """
         Format project technician value.
         Format: FIRST_INITIAL.LASTNAME
@@ -125,7 +125,7 @@ class DrawingGenerator:
             raise ValueError(f"Unexpected name format: {name}")
 
 
-    def add_office_info(self):
+    def _add_office_info(self):
         """
         Add the office info to the input data based on the MUNICIPALITY from inputs.
         """
@@ -137,10 +137,11 @@ class DrawingGenerator:
             self.input_data[key.upper()] = value.upper()
 
 
-    def add_engineer_stamps(self):
+    def _add_engineer_stamps(self):
         """
         Add engineer stamps to all layouts.
 
+        -----  -----  -----  -----  -----  -----  -----  -----
         Method not used currently since stamps will be added in pdf.
         Keeping the method for possible future use.
         """
@@ -158,7 +159,7 @@ class DrawingGenerator:
         replace_placeholder_text_with_block(self.doc, search_text="ENGINEER STAMP", block_name=block_name)
 
 
-    def load_landbase(self):
+    def _load_landbase(self):
         """
         Load the input Landbase (property lines, subdivision boundary etc.)
         with Project Boundary into drawing modelspace.
@@ -177,7 +178,7 @@ class DrawingGenerator:
         logger.info("Imported landbase from inputs")
 
 
-    def load_template_layouts(self):
+    def _load_template_layouts(self):
         """
         Load template layout definitions (paperspace).
         Remove default Layout1 after importing new layouts.
@@ -186,7 +187,8 @@ class DrawingGenerator:
         logger.debug("Adding project template layouts")
 
         # Load the template DXF
-        template_doc = ezdxf.readfile(self.template_path)
+        template_path = self._get_template_path()
+        template_doc = ezdxf.readfile(template_path)
         loader = Loader(template_doc, self.doc)
 
         # Preserve layout order from template
@@ -211,3 +213,17 @@ class DrawingGenerator:
         logger.info("Added project template layouts")
 
 
+    def _get_template_path(self):
+        """
+        Select template file based on template type from inputs.
+        Check if template file exists before returning.
+        """
+        template_type = self.input_data.get("TEMPLATE_TYPE", "")
+
+        template_name = f"ALECTRA {template_type} Template.dxf"
+        template_path = self.TEMPLATES_FOLDER / template_name
+
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template '{template_type}' not found: {template_path}")
+
+        return template_path

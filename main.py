@@ -5,7 +5,7 @@ from core.drawing_generator import DrawingGenerator
 def main():
     setup_logging()
     data = load_json_file("data/inputs/input_data.json")
-    generator = DrawingGenerator("data/templates/ALECTRA ArchD (24x36) Template.dxf", data)
+    generator = DrawingGenerator(data)
     generator.generate()
 
 if __name__ == "__main__":

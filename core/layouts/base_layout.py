@@ -1,5 +1,6 @@
 import logging
 from ezdxf.entities import Insert
+from config.viewport_config import VIEWPORT_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,9 @@ class BaseLayout:
                         attrib.dxf.text = self.block_attrs[tag]
                         logger.debug(f"[ATTRIB] Updated {tag} with {attrib.dxf.text}")
 
+        # Add project area viewport
+        self._add_project_area_viewport()
+
         # Continue with layout specific editing from subclass
         self.edit_specific()
 
@@ -96,18 +100,29 @@ class BaseLayout:
         return project_work_order + '-' + self.layout_name
 
 
-    def add_project_area_viewport(self, paper_center=(808.6697, 546.143), paper_width=127.0005, paper_height=100.0752):
+    def _add_project_area_viewport(self):
         """
-        Create viewport to the project area image in modelspace.
-        Default params set for all paperspace layouts instead of COVER PAGE layouts.
-        Please update params when adding viewports to COVER PAGE layouts.
+        Create viewport to the project area image based on VIEWPORT_CONFIG.
+        """
+        template_type = self.block_attrs.get("TEMPLATE_TYPE", "")
 
-        :param paper_center: center of the viewport on the paperspace - insertion point
-        :param paper_width: width of the viewport on the paperspace
-        :param paper_height: height of the viewport on the paperspace
-        """
+        # Determine if layout is default layout or cover page
+        is_cover = "COV" in self.layout_name
+        page_type = "cov" if is_cover else "default"
+
+        # Retrieve viewport config
+        viewport_config = VIEWPORT_CONFIG.get(template_type, {}).get(page_type, {})
+        if not viewport_config or template_type not in VIEWPORT_CONFIG or page_type not in VIEWPORT_CONFIG[template_type]:
+            raise ValueError(
+                f"Missing viewport configuration for '{template_type}' ({page_type})"
+            )
+        paper_center = viewport_config["paper_center"]
+        paper_width = viewport_config["paper_width"]
+        paper_height = viewport_config["paper_height"]
+
         centroid = self.block_attrs["PA_MSP_CENTER_POINT"]
         view_height = self.block_attrs["PA_MSP_HEIGHT"]
+
         viewport = self.layout.add_viewport(
             center=paper_center,  # center in paperspace
             size=(paper_width, paper_height),  # viewport width and height in paper units
